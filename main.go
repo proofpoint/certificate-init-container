@@ -173,14 +173,18 @@ func main() {
 		},
 	}
 
-	_, err = client.CertificatesV1Beta1().CreateCertificateSigningRequest(context.Background(), certificateSigningRequest)
+	_, err = client.CertificatesV1Beta1().GetCertificateSigningRequest(context.Background(), certificateSigningRequestName)
 	if err != nil {
-		log.Fatalf("unable to create the certificate signing request: %s", err)
+		_, err = client.CertificatesV1Beta1().CreateCertificateSigningRequest(context.Background(), certificateSigningRequest)
+		if err != nil {
+			log.Fatalf("unable to create the certificate signing request: %s", err)
+		}
+		log.Println("waiting for certificate...")
+	} else {
+		log.Println("signing request already exists")
 	}
 
 	var certificate []byte
-
-	log.Println("waiting for certificate...")
 	for {
 		csr, err := client.CertificatesV1Beta1().GetCertificateSigningRequest(context.Background(), certificateSigningRequestName)
 		if err != nil {
@@ -192,11 +196,17 @@ func main() {
 		if len(csr.GetStatus().GetConditions()) > 0 {
 			if *csr.GetStatus().GetConditions()[0].Type == "Approved" {
 				certificate = csr.GetStatus().Certificate
-				break
-			}
-		}
+				if len(certificate) > 1 {
+					log.Printf("got crt %s", certificate)
+					break
+				} else {
+					log.Printf("cert length still less than 1, wait to populate. Cert: %s", csr.GetStatus());
+				}
 
-		log.Printf("certificate signing request (%s) not approved; trying again in 5 seconds", certificateSigningRequestName)
+			}
+		} else {
+			log.Printf("certificate signing request (%s) not approved; trying again in 5 seconds", certificateSigningRequestName)
+		}
 
 		time.Sleep(5 * time.Second)
 	}
@@ -205,8 +215,10 @@ func main() {
 	if err := ioutil.WriteFile(certFile, certificate, 0644); err != nil {
 		log.Fatalf("unable to write to %s: %s", certFile, err)
 	}
-
+	
 	log.Printf("wrote %s", certFile)
+
+	time.Sleep(300 * time.Second)
 
 	os.Exit(0)
 }
