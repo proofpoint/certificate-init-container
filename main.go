@@ -237,8 +237,6 @@ func main() {
 	
 	log.Printf("wrote %s", certFile)
 
-	time.Sleep(300 * time.Second)
-
 	os.Exit(0)
 }
 
