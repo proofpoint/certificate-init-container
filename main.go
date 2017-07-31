@@ -45,6 +45,7 @@ var (
 	serviceIPs         string
 	serviceNames       string
 	subdomain          string
+	labels             string
 )
 
 func main() {
@@ -58,7 +59,8 @@ func main() {
 	flag.StringVar(&serviceNames, "service-names", "", "service names that resolve to this Pod; comma separated")
 	flag.StringVar(&serviceIPs, "service-ips", "", "service IP addresses that resolve to this Pod; comma separated")
 	flag.StringVar(&subdomain, "subdomain", "", "subdomain as defined by pod.spec.subdomain")
-	flag.Parse()
+	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
+  flag.Parse()
 
 	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
 
@@ -86,6 +88,22 @@ func main() {
 	}
 
 	log.Printf("wrote %s", keyFile)
+
+  // Gather the list of labels that will be added to the CreateCertificateSigningRequest object
+	labelsMap := make(map[string]string)
+
+	for _, n := range strings.Split(labels, ",") {
+		if n == "" {
+			continue
+		}
+		s := strings.Split(n, "=")
+		label, key := s[0], s[1]
+		if label == "" {
+			continue
+		}
+		labelsMap[label] = key
+	}
+
 
 	// Gather the list of IP addresses for the certificate's IP SANs field which
 	// include:
@@ -165,6 +183,7 @@ func main() {
 	certificateSigningRequest := &certificates.CertificateSigningRequest{
 		Metadata: &v1.ObjectMeta{
 			Name: k8s.String(certificateSigningRequestName),
+			Labels: labelsMap,
 		},
 		Spec: &certificates.CertificateSigningRequestSpec{
 			Groups:   []string{"system:authenticated"},

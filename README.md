@@ -151,4 +151,6 @@ Usage of certificate-init-container:
     	service names that resolve to this Pod; comma separated
   -subdomain string
     	subdomain as defined by pod.spec.subdomain
+  -labels string
+    	labels to include in CertificateSigningRequest object; comma seprated list of key=value
 ```
