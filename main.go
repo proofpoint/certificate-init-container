@@ -46,6 +46,8 @@ var (
 	serviceNames       string
 	subdomain          string
 	labels             string
+	secretName         string
+	createSecret       bool
 )
 
 func main() {
@@ -60,6 +62,8 @@ func main() {
 	flag.StringVar(&serviceIPs, "service-ips", "", "service IP addresses that resolve to this Pod; comma separated")
 	flag.StringVar(&subdomain, "subdomain", "", "subdomain as defined by pod.spec.subdomain")
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
+	flag.StringVar(&secretName, "secret-name", "", "secret name to store generated files")
+	flag.BoolVar(&createSecret, "create-secret", false, "create a new secret instead of waiting for one to update")
   flag.Parse()
 
 	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
@@ -175,7 +179,7 @@ func main() {
 	if err := ioutil.WriteFile(csrFile, certificateRequestBytes, 0644); err != nil {
 		log.Fatal("unable to %s, error: %s", csrFile, err)
 	}
-
+	
 	log.Printf("wrote %s", csrFile)
 
 	// Submit a certificate signing request, wait for it to be approved, then save
@@ -241,6 +245,33 @@ func main() {
 	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
 	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
+	if secretName != "" {
+		for {
+			ks, err := client.CoreV1().GetSecret(context.Background(), secretName, namespace)
+			if err != nil {
+				if createSecret {
+					log.Fatalf("TODO: cannot create secrets")
+				} else {
+					log.Printf("Secret to store credentials (%s) not found; trying again in 5 seconds", secretName)
+					time.Sleep(5 * time.Second)
+					continue
+				}
+			}
+
+			k8sCrt, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+			stringData := make(map[string]string)
+			stringData["tls.key"] = string(pemKeyBytes)
+			stringData["tls.crt"] = string(certificate)
+			stringData["k8s.crt"] = string(k8sCrt) // ok
+			
+			ks.StringData = stringData
+			_, err = client.CoreV1().UpdateSecret(context.TODO(), ks)
+			log.Printf("Stored credentials in secret: (%s)", secretName)
+
+			break 
+		}
+	}
 
 	os.Exit(0)
 }
