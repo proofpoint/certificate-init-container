@@ -1,3 +1,9 @@
+[![Latest Release](http://github-release-version.herokuapp.com/github/onedata/certificate-init-container/release.svg)](https://github.com/onedata/certificate-init-container/releases/latest)
+[![Build Status](https://travis-ci.org/onedata/certificate-init-container.svg?branch=master)](https://travis-ci.org/onedata/certificate-init-container)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/9e61e311725b4015a24f294c591746b1)](https://www.codacy.com/app/onedata/certificate-init-container?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=onedata/certificate-init-container&amp;utm_campaign=Badge_Grade)
+[![Latest Docker Yag](https://images.microbadger.com/badges/version/onedata/certificate-init-container.svg)](https://microbadger.com/images/onedata/certificate-init-container "Get your own version badge on microbadger.com")
+[![Latest Docker Tag Details](https://images.microbadger.com/badges/image/onedata/certificate-init-container.svg)](https://microbadger.com/images/onedata/certificate-init-container "Get your own image badge on microbadger.com")
+
 # Certificate Init Container
 
 The `certificate-init-container` generates TLS certificates for pods using the [Kubernetes certificate API](https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster).
