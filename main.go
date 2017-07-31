@@ -237,6 +237,11 @@ func main() {
 	
 	log.Printf("wrote %s", certFile)
 
+	log.Printf("Deleting certificate signing request  %s", certificateSigningRequestName)
+	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
+	log.Printf("Removed approved request %s", certificateSigningRequestName)
+
+
 	os.Exit(0)
 }
 
