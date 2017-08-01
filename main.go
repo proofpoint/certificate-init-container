@@ -268,6 +268,7 @@ func main() {
 			stringData["tls.key"] = string(pemKeyBytes)
 			stringData["tls.crt"] = string(certificate)
 			stringData["k8s.crt"] = string(k8sCrt) // ok
+			stringData["tlsAndK8s.crt"] = string(certificate)+"\n"+string(k8sCrt) // ok
 			
 			ks.StringData = stringData
 			_, err = client.CoreV1().UpdateSecret(context.TODO(), ks)
