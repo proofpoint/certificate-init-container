@@ -48,6 +48,7 @@ var (
 	labels             string
 	secretName         string
 	createSecret       bool
+	keysize            int
 )
 
 func main() {
@@ -64,7 +65,8 @@ func main() {
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
 	flag.StringVar(&secretName, "secret-name", "", "secret name to store generated files")
 	flag.BoolVar(&createSecret, "create-secret", false, "create a new secret instead of waiting for one to update")
-  flag.Parse()
+	flag.IntVar(&keysize, "keysize", 2048, "bit size of private key")
+	flag.Parse()
 
 	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
 
@@ -76,7 +78,7 @@ func main() {
 	// Generate a private key, pem encode it, and save it to the filesystem.
 	// The private key will be used to create a certificate signing request (csr)
 	// that will be submitted to a Kubernetes CA to obtain a TLS certificate.
-	key, err := rsa.GenerateKey(rand.Reader, 1024)
+	key, err := rsa.GenerateKey(rand.Reader, keysize)
 	if err != nil {
 		log.Fatalf("unable to genarate the private key: %s", err)
 	}
@@ -93,7 +95,7 @@ func main() {
 
 	log.Printf("wrote %s", keyFile)
 
-  // Gather the list of labels that will be added to the CreateCertificateSigningRequest object
+	// Gather the list of labels that will be added to the CreateCertificateSigningRequest object
 	labelsMap := make(map[string]string)
 
 	for _, n := range strings.Split(labels, ",") {
@@ -107,7 +109,6 @@ func main() {
 		}
 		labelsMap[label] = key
 	}
-
 
 	// Gather the list of IP addresses for the certificate's IP SANs field which
 	// include:
@@ -179,14 +180,14 @@ func main() {
 	if err := ioutil.WriteFile(csrFile, certificateRequestBytes, 0644); err != nil {
 		log.Fatal("unable to %s, error: %s", csrFile, err)
 	}
-	
+
 	log.Printf("wrote %s", csrFile)
 
 	// Submit a certificate signing request, wait for it to be approved, then save
 	// the signed certificate to the file system.
 	certificateSigningRequest := &certificates.CertificateSigningRequest{
 		Metadata: &v1.ObjectMeta{
-			Name: k8s.String(certificateSigningRequestName),
+			Name:   k8s.String(certificateSigningRequestName),
 			Labels: labelsMap,
 		},
 		Spec: &certificates.CertificateSigningRequestSpec{
@@ -227,7 +228,7 @@ func main() {
 					log.Printf("got crt %s", certificate)
 					break
 				} else {
-					log.Printf("cert length still less than 1, wait to populate. Cert: %s", csr.GetStatus());
+					log.Printf("cert length still less than 1, wait to populate. Cert: %s", csr.GetStatus())
 				}
 
 			}
@@ -242,7 +243,7 @@ func main() {
 	if err := ioutil.WriteFile(certFile, certificate, 0644); err != nil {
 		log.Fatalf("unable to write to %s: %s", certFile, err)
 	}
-	
+
 	log.Printf("wrote %s", certFile)
 
 	log.Printf("Deleting certificate signing request  %s", certificateSigningRequestName)
@@ -267,14 +268,14 @@ func main() {
 			stringData := make(map[string]string)
 			stringData["tls.key"] = string(pemKeyBytes)
 			stringData["tls.crt"] = string(certificate)
-			stringData["k8s.crt"] = string(k8sCrt) // ok
-			stringData["tlsAndK8s.crt"] = string(certificate)+"\n"+string(k8sCrt) // ok
-			
+			stringData["k8s.crt"] = string(k8sCrt)                                    // ok
+			stringData["tlsAndK8s.crt"] = string(certificate) + "\n" + string(k8sCrt) // ok
+
 			ks.StringData = stringData
 			_, err = client.CoreV1().UpdateSecret(context.TODO(), ks)
 			log.Printf("Stored credentials in secret: (%s)", secretName)
 
-			break 
+			break
 		}
 	}
 
