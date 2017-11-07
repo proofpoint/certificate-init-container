@@ -65,7 +65,7 @@ func main() {
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
 	flag.StringVar(&secretName, "secret-name", "", "secret name to store generated files")
 	flag.BoolVar(&createSecret, "create-secret", false, "create a new secret instead of waiting for one to update")
-	flag.IntVar(&keysize, "keysize", 2048, "bit size of private key")
+	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.Parse()
 
 	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)

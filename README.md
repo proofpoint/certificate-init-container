@@ -145,7 +145,7 @@ Usage of certificate-init-container:
   -hostname string
     	hostname as defined by pod.spec.hostname
   -keysize int
-    	bit size of private key (default 2048)
+    	bit size of private key (default 3072)
   -namespace string
     	namespace as defined by pod.metadata.namespace (default "default")
   -pod-ip string
