@@ -1,21 +1,11 @@
 language: go
-go:
-- 1.8.x
 sudo: required
-services:
-- docker
+
+install:
+- curl https://glide.sh/get | sh
+
 script:
-- make build
-- make container
-before_deploy:
-- docker login -u $DOCKER_USER -p $DOCKER_PASS
-deploy:
-- provider: script
-  skip_cleanup: true
-  script: make push
-  on:
-    tags: true
-env:
-  global:
-  - secure: dd3HU7zEjZWrSS0RG3NgPMt7Baan3Hng1LcN31IiBYQz2vfiRAMleRxRv3or5zmRFMdlo52uE1KxT96osblwHscFVKUZ7XNcMH5vxW4WHLhJ9HM5bTjVKzGocEbvEvg3rpSc3FlrzNHr+OGdkzYo14RiZginKaZ+TaB0I5kBtaTH2jPVsj6jNuW5tKZC3m1h1CJIggsr5hy1Og7n8v+cnkWfoWokEWyEQTyyNUUGEXiA1Bbgs4WI6cNhfQptmkeLiAueZqhg6zzCBhWyyY/RVs4Fh2/hBqZS58nu9W6OOtoo2uatmyhtZFJtVSk070G15BLxNkssksyJ1cYjA5ZwhXAwMNmsLwUK4REin4RxJbClL6qBCS5EUlsPke0dwpvXC2Z/ySb0Rxe6cnhNwVF/9adKy0vilfZHSzyaqAL0zjGJ1ddJe4XHcY2y/rceFQTfGC+Xa1lt9VIKwa6Hwz4zwPMQXfU+kZUxcJ6oawiRuVP/NVb5kaENpOKHbjC5eZ5WADWtGdrGtKTXljkIjJOdItnoUuKNVzRhNX7DooY7+F8oIcXVPZj3baTGodUtnm+6gnWcGubFci1XNQnFxt3Ah3qB0HcvcAT1tCzXgm1BgBEtpOvi9BFVcAZyeIoFspCqnfD6kNZXrroY2Z0ZZio844mBDChTwjGdLLkEDhvGLtg=
-  - secure: 23UYHwhWIg4T5RIsn19o+ln9qBczQbYAbMo0trSTtbx2rsK/qU27ORJxeSBmxlqH39cFpjWPL7SMNrm8oYEmXkMqPV+OZcZxyqAJOsY03jee0+1xbnWNHwC9wolH9BPKK2X9xBYhkQbqoZYLDPCFenSJkJ4Zak2eEEGBwLQWTWO2Aoo1u0yfOdmyz2OwNpUalhDF3soJrc2Mn8Tp9pRqQZDGUE+ZoXbUVc9hY7tYN8vaH6xDxwxzl/V06WPTvXupnB2ee7ihsd7dryQawkMEKA3232B0Ovv0SKn0DScSPVSK/hxdRvbKMd2lLNKFHbI639Hx4KJNg/xE0vaZ2zDgO3aRrOTENiCZtrpZr/1T14nsarJ8g2/zCIotBwYJnUaEiWD8jk123X2TeMj04AGYZC39cX1/coB8D7A4Kn8jFoLEFBtiF+BYcunukOIWu6Mxw13XPZRmxD0JuT697egSZPw6ETSeu8rF3z1Wxmbb4YetpwR3fQRL8zTHbfivZ3Uw0jZeBmEfTFzzT4M+ZCZYJYWHWvbg8TJ9uO7lVpA8UyLFQOvs0vuOgZsOulgV5GIRK+7bdIShQJCZ03u3C8R+RVGdP8Z1mSy36vlPtjUwjasc7pGtw6WctYvtFudjp8eWjLfMYGDsskeEqGbZlvmsnsGMN4KUbMDALeqA+q8lIVQ=
+- go test $(glide novendor)
+
+notifications:
+  email: false
