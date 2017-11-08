@@ -1,3 +1,7 @@
+FROM       golang:alpine
+ADD        . /go/src/github.com/proofpoint/certificate-init-container
+RUN        go install github.com/proofpoint/certificate-init-container
+
 FROM alpine
-ADD certificate-init-container /certificate-init-container
+COPY --from=0 /go/bin/certificate-init-container .
 ENTRYPOINT ["/certificate-init-container"]
