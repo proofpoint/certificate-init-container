@@ -89,6 +89,7 @@ certificatesigningrequest "tls-app-2342064067-c9xwf-default" approved
 ```
 
 Once the certificate signing request has been approved the `certificate-init-container` will fetch the signed certificate and write it to a shared filesystem.
+It will write the certificate in both PEM and Java keystore (password "keystore") format.
 
 ```
 kubectl logs tls-app-2342064067-c9xwf -c certificate-init-container
@@ -101,6 +102,7 @@ kubectl logs tls-app-2342064067-c9xwf -c certificate-init-container
 2017/04/06 06:58:27 certificate signing request (tls-app-2342064067-c9xwf-default) not approved; trying again in 5 seconds
 ...
 2017/04/06 07:00:28 wrote /etc/tls/tls.crt
+2017/04/06 07:00:28 wrote /etc/tls/tls.jks
 ```
 
 Next the `certificate-init-container` will exit and the pod will start the remaining containers which will have access to the certificate and private key.

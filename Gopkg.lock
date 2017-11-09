@@ -14,6 +14,12 @@
   revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
 
 [[projects]]
+  name = "github.com/lwithers/minijks"
+  packages = ["jks"]
+  revision = "81ebb9483d4a00bb43c4c5fe456d75d46f9c88f4"
+  version = "v0.5.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["http2","http2/hpack","idna","lex/httplex"]
@@ -34,6 +40,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ef0edccd54b732be92f50471812dba2be34a2a874e90af7eb3ab25960a365803"
+  inputs-digest = "eb7c776a9f9a317d08233e198bb4133fd32d0b3d217458125c1c98b4eef5b09c"
   solver-name = "gps-cdcl"
   solver-version = 1
