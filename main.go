@@ -177,7 +177,7 @@ func main() {
 
 	csrFile := path.Join(certDir, "tls.csr")
 	if err := ioutil.WriteFile(csrFile, certificateRequestBytes, 0644); err != nil {
-		log.Fatal("unable to %s, error: %s", csrFile, err)
+		log.Fatalf("unable to %s, error: %s", csrFile, err)
 	}
 
 	log.Printf("wrote %s", csrFile)
@@ -244,6 +244,8 @@ func main() {
 	}
 
 	log.Printf("wrote %s", certFile)
+
+	writeKeystore(certDir, key, certificate)
 
 	log.Printf("Deleting certificate signing request  %s", certificateSigningRequestName)
 	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
