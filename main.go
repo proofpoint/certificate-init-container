@@ -68,32 +68,10 @@ func main() {
 	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.Parse()
 
-	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
-
 	client, err := k8s.NewInClusterClient()
 	if err != nil {
 		log.Fatalf("unable to create a Kubernetes client: %s", err)
 	}
-
-	// Generate a private key, pem encode it, and save it to the filesystem.
-	// The private key will be used to create a certificate signing request (csr)
-	// that will be submitted to a Kubernetes CA to obtain a TLS certificate.
-	key, err := rsa.GenerateKey(rand.Reader, keysize)
-	if err != nil {
-		log.Fatalf("unable to genarate the private key: %s", err)
-	}
-
-	pemKeyBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	})
-
-	keyFile := path.Join(certDir, "tls.key")
-	if err := ioutil.WriteFile(keyFile, pemKeyBytes, 0644); err != nil {
-		log.Fatalf("unable to write to %s: %s", keyFile, err)
-	}
-
-	log.Printf("wrote %s", keyFile)
 
 	// Gather the list of labels that will be added to the CreateCertificateSigningRequest object
 	labelsMap := make(map[string]string)
@@ -158,6 +136,26 @@ func main() {
 		dnsNames = append(dnsNames, serviceDomainName(n, namespace, clusterDomain))
 	}
 
+	// Generate a private key, pem encode it, and save it to the filesystem.
+	// The private key will be used to create a certificate signing request (csr)
+	// that will be submitted to a Kubernetes CA to obtain a TLS certificate.
+	key, err := rsa.GenerateKey(rand.Reader, keysize)
+	if err != nil {
+		log.Fatalf("unable to genarate the private key: %s", err)
+	}
+
+	pemKeyBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+
+	keyFile := path.Join(certDir, "tls.key")
+	if err := ioutil.WriteFile(keyFile, pemKeyBytes, 0644); err != nil {
+		log.Fatalf("unable to write to %s: %s", keyFile, err)
+	}
+
+	log.Printf("wrote %s", keyFile)
+
 	// Generate the certificate request, pem encode it, and save it to the filesystem.
 	certificateRequestTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
@@ -184,6 +182,7 @@ func main() {
 
 	// Submit a certificate signing request, wait for it to be approved, then save
 	// the signed certificate to the file system.
+	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
 	certificateSigningRequest := &certificates.CertificateSigningRequest{
 		Metadata: &v1.ObjectMeta{
 			Name:   k8s.String(certificateSigningRequestName),
@@ -247,7 +246,7 @@ func main() {
 
 	writeKeystore(certDir, key, certificate)
 
-	log.Printf("Deleting certificate signing request  %s", certificateSigningRequestName)
+	log.Printf("Deleting certificate signing request %s", certificateSigningRequestName)
 	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
 	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
