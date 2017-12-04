@@ -97,7 +97,7 @@ func main() {
 		log.Fatal("invalid pod IP address")
 	}
 
-	ipaddresses := []net.IP{ip}
+	ipAddresses := []net.IP{ip}
 
 	for _, s := range strings.Split(serviceIPs, ",") {
 		if s == "" {
@@ -107,7 +107,7 @@ func main() {
 		if ip.To4() == nil && ip.To16() == nil {
 			log.Fatal("invalid service IP address")
 		}
-		ipaddresses = append(ipaddresses, ip)
+		ipAddresses = append(ipAddresses, ip)
 	}
 
 	// Gather a list of DNS names that resolve to this pod which include the
@@ -136,6 +136,48 @@ func main() {
 		dnsNames = append(dnsNames, serviceDomainName(n, namespace, clusterDomain))
 	}
 
+	key, certificate := requestCertificate(client, labelsMap, dnsNames, ipAddresses)
+
+	writeKeystore(certDir, key, certificate)
+
+	if secretName != "" {
+		pemKeyBytes := pem.EncodeToMemory(&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(key),
+		})
+
+		for {
+			ks, err := client.CoreV1().GetSecret(context.Background(), secretName, namespace)
+			if err != nil {
+				if createSecret {
+					log.Fatalf("TODO: cannot create secrets")
+				} else {
+					log.Printf("Secret to store credentials (%s) not found; trying again in 5 seconds", secretName)
+					time.Sleep(5 * time.Second)
+					continue
+				}
+			}
+
+			k8sCrt, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+			stringData := make(map[string]string)
+			stringData["tls.key"] = string(pemKeyBytes)
+			stringData["tls.crt"] = string(certificate)
+			stringData["k8s.crt"] = string(k8sCrt)                                    // ok
+			stringData["tlsAndK8s.crt"] = string(certificate) + "\n" + string(k8sCrt) // ok
+
+			ks.StringData = stringData
+			_, err = client.CoreV1().UpdateSecret(context.TODO(), ks)
+			log.Printf("Stored credentials in secret: (%s)", secretName)
+
+			break
+		}
+	}
+
+	os.Exit(0)
+}
+
+func requestCertificate(client *k8s.Client, labels map[string]string, dnsNames []string, ipAddresses []net.IP) (key *rsa.PrivateKey, certificate []byte) {
 	// Generate a private key, pem encode it, and save it to the filesystem.
 	// The private key will be used to create a certificate signing request (csr)
 	// that will be submitted to a Kubernetes CA to obtain a TLS certificate.
@@ -163,7 +205,7 @@ func main() {
 		},
 		SignatureAlgorithm: x509.SHA256WithRSA,
 		DNSNames:           dnsNames,
-		IPAddresses:        ipaddresses,
+		IPAddresses:        ipAddresses,
 	}
 
 	certificateRequest, err := x509.CreateCertificateRequest(rand.Reader, &certificateRequestTemplate, key)
@@ -186,7 +228,7 @@ func main() {
 	certificateSigningRequest := &certificates.CertificateSigningRequest{
 		Metadata: &v1.ObjectMeta{
 			Name:   k8s.String(certificateSigningRequestName),
-			Labels: labelsMap,
+			Labels: labels,
 		},
 		Spec: &certificates.CertificateSigningRequestSpec{
 			Groups:   []string{"system:authenticated"},
@@ -210,7 +252,6 @@ func main() {
 		log.Println("signing request already exists")
 	}
 
-	var certificate []byte
 	for {
 		csr, err := client.CertificatesV1Beta1().GetCertificateSigningRequest(context.Background(), certificateSigningRequestName)
 		if err != nil {
@@ -244,42 +285,11 @@ func main() {
 
 	log.Printf("wrote %s", certFile)
 
-	writeKeystore(certDir, key, certificate)
-
 	log.Printf("Deleting certificate signing request %s", certificateSigningRequestName)
 	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
 	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
-	if secretName != "" {
-		for {
-			ks, err := client.CoreV1().GetSecret(context.Background(), secretName, namespace)
-			if err != nil {
-				if createSecret {
-					log.Fatalf("TODO: cannot create secrets")
-				} else {
-					log.Printf("Secret to store credentials (%s) not found; trying again in 5 seconds", secretName)
-					time.Sleep(5 * time.Second)
-					continue
-				}
-			}
-
-			k8sCrt, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-
-			stringData := make(map[string]string)
-			stringData["tls.key"] = string(pemKeyBytes)
-			stringData["tls.crt"] = string(certificate)
-			stringData["k8s.crt"] = string(k8sCrt)                                    // ok
-			stringData["tlsAndK8s.crt"] = string(certificate) + "\n" + string(k8sCrt) // ok
-
-			ks.StringData = stringData
-			_, err = client.CoreV1().UpdateSecret(context.TODO(), ks)
-			log.Printf("Stored credentials in secret: (%s)", secretName)
-
-			break
-		}
-	}
-
-	os.Exit(0)
+	return
 }
 
 func defaultDNSNames(ip, hostname, subdomain, namespace, clusterDomain string) []string {
