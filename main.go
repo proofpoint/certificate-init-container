@@ -12,7 +12,6 @@
 package main
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"flag"
@@ -23,8 +22,9 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/ericchiang/k8s"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -61,9 +61,11 @@ func main() {
 	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.Parse()
 
-	client, err := k8s.NewInClusterClient()
+	// Create a Kubernetes client.
+	// Initialize a configuration based on the default service account.
+    client, err := newClient()
 	if err != nil {
-		log.Fatalf("unable to create a Kubernetes client: %s", err)
+		log.Fatalf("Could not create Kubernetes client: %s", err)
 	}
 
 	// Gather the list of labels that will be added to the CreateCertificateSigningRequest object
@@ -140,7 +142,7 @@ func main() {
 		})
 
 		for {
-			ks, err := client.CoreV1().GetSecret(context.Background(), secretName, namespace)
+			ks, err := client.CoreV1().Secrets(namespace).Get(secretName, metaV1.GetOptions{})
 			if err != nil {
 				if createSecret {
 					log.Fatalf("TODO: cannot create secrets")
@@ -160,7 +162,7 @@ func main() {
 			stringData["tlsAndK8s.crt"] = string(certificate) + "\n" + string(k8sCrt) // ok
 
 			ks.StringData = stringData
-			_, err = client.CoreV1().UpdateSecret(context.TODO(), ks)
+			_, err = client.CoreV1().Secrets(namespace).Update(ks)
 			log.Printf("Stored credentials in secret: (%s)", secretName)
 
 			break
@@ -191,4 +193,16 @@ func podHeadlessDomainName(hostname, subdomain, namespace, domain string) string
 		return ""
 	}
 	return fmt.Sprintf("%s.%s.%s.svc.%s", hostname, subdomain, namespace, domain)
+}
+
+func newClient() (*kubernetes.Clientset, error) {
+	var config *rest.Config
+	var err error
+		// Initialize a configuration based on the default service account.
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+
+	return kubernetes.NewForConfig(config)
 }
