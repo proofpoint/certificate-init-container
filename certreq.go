@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -13,14 +12,12 @@ import (
 	"net"
 	"path"
 	"time"
-
-	certificates "github.com/ericchiang/k8s/apis/certificates/v1beta1"
-
-	"github.com/ericchiang/k8s"
-	"github.com/ericchiang/k8s/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	certificates "k8s.io/api/certificates/v1beta1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func requestCertificate(client *k8s.Client, labels map[string]string, dnsNames []string, ipAddresses []net.IP) (key *rsa.PrivateKey, certificate []byte) {
+func requestCertificate(client kubernetes.Interface, labels map[string]string, dnsNames []string, ipAddresses []net.IP) (key *rsa.PrivateKey, certificate []byte) {
 	// Generate a private key, pem encode it, and save it to the filesystem.
 	// The private key will be used to create a certificate signing request (csr)
 	// that will be submitted to a Kubernetes CA to obtain a TLS certificate.
@@ -69,24 +66,28 @@ func requestCertificate(client *k8s.Client, labels map[string]string, dnsNames [
 	// the signed certificate to the file system.
 	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
 	certificateSigningRequest := &certificates.CertificateSigningRequest{
-		Metadata: &v1.ObjectMeta{
-			Name:   k8s.String(certificateSigningRequestName),
+		TypeMeta: metaV1.TypeMeta{
+			Kind:       "CertificateSigningRequest",
+			APIVersion: "v1beta1",
+		},
+		ObjectMeta: metaV1.ObjectMeta{
+			Name:   certificateSigningRequestName,
 			Labels: labels,
 		},
-		Spec: &certificates.CertificateSigningRequestSpec{
-			Groups:   []string{"system:authenticated"},
+		Spec: certificates.CertificateSigningRequestSpec{
+//			Groups:   []string{"system:authenticated"},
 			Request:  certificateRequestBytes,
-			KeyUsage: []string{"digital signature", "key encipherment", "server auth", "client auth"},
+			Usages: []certificates.KeyUsage{certificates.UsageDigitalSignature, certificates.UsageKeyEncipherment, certificates.UsageServerAuth, certificates.UsageClientAuth},
 		},
 	}
 
 	log.Printf("Deleting certificate signing request  %s", certificateSigningRequestName)
-	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
+	client.CertificatesV1beta1().CertificateSigningRequests().Delete(certificateSigningRequestName, &metaV1.DeleteOptions{})
 	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
-	_, err = client.CertificatesV1Beta1().GetCertificateSigningRequest(context.Background(), certificateSigningRequestName)
+	_, err = client.CertificatesV1beta1().CertificateSigningRequests().Get(certificateSigningRequestName, metaV1.GetOptions{})
 	if err != nil {
-		_, err = client.CertificatesV1Beta1().CreateCertificateSigningRequest(context.Background(), certificateSigningRequest)
+		_, err = client.CertificatesV1beta1().CertificateSigningRequests().Create(certificateSigningRequest)
 		if err != nil {
 			log.Fatalf("unable to create the certificate signing request: %s", err)
 		}
@@ -96,21 +97,21 @@ func requestCertificate(client *k8s.Client, labels map[string]string, dnsNames [
 	}
 
 	for {
-		csr, err := client.CertificatesV1Beta1().GetCertificateSigningRequest(context.Background(), certificateSigningRequestName)
+		csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(certificateSigningRequestName, metaV1.GetOptions{})
 		if err != nil {
 			log.Printf("unable to retrieve certificate signing request (%s): %s", certificateSigningRequestName, err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
-		if len(csr.GetStatus().GetConditions()) > 0 {
-			if *csr.GetStatus().GetConditions()[0].Type == "Approved" {
-				certificate = csr.GetStatus().Certificate
+		if len(csr.Status.Conditions) > 0 {
+			if csr.Status.Conditions[0].Type == certificates.CertificateApproved {
+				certificate = csr.Status.Certificate
 				if len(certificate) > 1 {
 					log.Printf("got crt %s", certificate)
 					break
 				} else {
-					log.Printf("cert length still less than 1, wait to populate. Cert: %s", csr.GetStatus())
+					log.Printf("cert length still less than 1, wait to populate. Cert: %s", csr.Status)
 				}
 
 			}
@@ -129,7 +130,7 @@ func requestCertificate(client *k8s.Client, labels map[string]string, dnsNames [
 	log.Printf("wrote %s", certFile)
 
 	log.Printf("Deleting certificate signing request %s", certificateSigningRequestName)
-	client.CertificatesV1Beta1().DeleteCertificateSigningRequest(context.Background(), certificateSigningRequestName)
+	client.CertificatesV1beta1().CertificateSigningRequests().Delete(certificateSigningRequestName, &metaV1.DeleteOptions{})
 	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
 	return

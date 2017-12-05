@@ -1,7 +1,7 @@
 [[constraint]]
-  name = "github.com/ericchiang/k8s"
-  version = "0.4.0"
-
-[[constraint]]
   name = "github.com/lwithers/minijks"
   version = "0.5.0"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "5.0.1"
