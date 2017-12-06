@@ -75,15 +75,10 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 			Labels: labels,
 		},
 		Spec: certificates.CertificateSigningRequestSpec{
-//			Groups:   []string{"system:authenticated"},
 			Request:  certificateRequestBytes,
 			Usages: []certificates.KeyUsage{certificates.UsageDigitalSignature, certificates.UsageKeyEncipherment, certificates.UsageServerAuth, certificates.UsageClientAuth},
 		},
 	}
-
-	log.Printf("Deleting certificate signing request  %s", certificateSigningRequestName)
-	client.CertificatesV1beta1().CertificateSigningRequests().Delete(certificateSigningRequestName, &metaV1.DeleteOptions{})
-	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
 	_, err = client.CertificatesV1beta1().CertificateSigningRequests().Get(certificateSigningRequestName, metaV1.GetOptions{})
 	if err != nil {
@@ -128,10 +123,6 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 	}
 
 	log.Printf("wrote %s", certFile)
-
-	log.Printf("Deleting certificate signing request %s", certificateSigningRequestName)
-	client.CertificatesV1beta1().CertificateSigningRequests().Delete(certificateSigningRequestName, &metaV1.DeleteOptions{})
-	log.Printf("Removed approved request %s", certificateSigningRequestName)
 
 	return
 }
