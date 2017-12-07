@@ -108,21 +108,13 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 			continue
 		}
 
-		if len(csr.Status.Conditions) > 0 {
-			if csr.Status.Conditions[0].Type == certificates.CertificateApproved {
-				certificate = csr.Status.Certificate
-				if len(certificate) > 1 {
-					log.Printf("got crt %s", certificate)
-					break
-				} else {
-					log.Printf("cert length still less than 1, wait to populate. Cert: %s", csr.Status)
-				}
-
-			}
-		} else {
-			log.Printf("certificate signing request (%s) not approved; trying again in 5 seconds", certificateSigningRequestName)
+		certificate = csr.Status.Certificate
+		if len(certificate) > 0 {
+			log.Printf("got certificate:\n%s", certificate)
+			break
 		}
 
+		log.Printf("certificate signing request (%s) not issued; trying again in 5 seconds", certificateSigningRequestName)
 		time.Sleep(5 * time.Second)
 	}
 
