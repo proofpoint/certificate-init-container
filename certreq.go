@@ -114,6 +114,12 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 			break
 		}
 
+		for _, condition := range csr.Status.Conditions {
+			if condition.Type == certificates.CertificateDenied {
+				log.Fatalf("certificate signing request (%s) denied for %q: %q", certificateSigningRequestName, condition.Reason, condition.Message)
+			}
+		}
+
 		log.Printf("certificate signing request (%s) not issued; trying again in 5 seconds", certificateSigningRequestName)
 		time.Sleep(5 * time.Second)
 	}
