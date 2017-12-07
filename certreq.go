@@ -8,13 +8,22 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	certificates "k8s.io/api/certificates/v1beta1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"log"
+	"math/big"
 	"net"
 	"path"
 	"time"
-	"k8s.io/client-go/kubernetes"
-	certificates "k8s.io/api/certificates/v1beta1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	randAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+)
+
+var (
+	randAlphabetLength = big.NewInt(int64(len(randAlphabet)))
 )
 
 func requestCertificate(client kubernetes.Interface, labels map[string]string, dnsNames []string, ipAddresses []net.IP) (key *rsa.PrivateKey, certificate []byte) {
@@ -64,7 +73,7 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 
 	// Submit a certificate signing request, wait for it to be approved, then save
 	// the signed certificate to the file system.
-	certificateSigningRequestName := fmt.Sprintf("%s-%s", podName, namespace)
+	certificateSigningRequestName := requestName()
 	certificateSigningRequest := &certificates.CertificateSigningRequest{
 		TypeMeta: metaV1.TypeMeta{
 			Kind:       "CertificateSigningRequest",
@@ -75,8 +84,8 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 			Labels: labels,
 		},
 		Spec: certificates.CertificateSigningRequestSpec{
-			Request:  certificateRequestBytes,
-			Usages: []certificates.KeyUsage{certificates.UsageDigitalSignature, certificates.UsageKeyEncipherment, certificates.UsageServerAuth, certificates.UsageClientAuth},
+			Request: certificateRequestBytes,
+			Usages:  []certificates.KeyUsage{certificates.UsageDigitalSignature, certificates.UsageKeyEncipherment, certificates.UsageServerAuth, certificates.UsageClientAuth},
 		},
 	}
 
@@ -124,5 +133,17 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 
 	log.Printf("wrote %s", certFile)
 
+	return
+}
+
+func requestName() (name string) {
+	name = fmt.Sprintf("%s-%s-", podName, namespace)
+	for i := 0; i < 5; i++ {
+		n, err := rand.Int(rand.Reader, randAlphabetLength)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to generate request name: %v", err))
+		}
+		name += string(randAlphabet[n.Int64()])
+	}
 	return
 }
