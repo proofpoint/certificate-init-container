@@ -26,6 +26,17 @@ func writeKeystore(certDir string, privkey *rsa.PrivateKey, pemCertificate []byt
 		certChain = append(certChain, &jks.KeypairCert{Cert: cert})
 	}
 
+	if len(certChain) == 0 {
+		log.Fatalf("Certificate chain has no certificates")
+	}
+	key, ok := certChain[0].Cert.PublicKey.(*rsa.PublicKey)
+	if !ok {
+		log.Fatalf("Certificate public key algorithm is not RSA")
+	}
+	if key.N.Cmp(privkey.N) != 0 || key.E != privkey.E {
+		log.Fatalf("Certificate public key does not match our private key")
+	}
+
 	kp := jks.Keypair{
 		Alias:      "host",
 		Timestamp:  time.Now(),
