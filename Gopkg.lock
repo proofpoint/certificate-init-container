@@ -140,6 +140,12 @@
   version = "v2.0.1"
 
 [[projects]]
+  name = "github.com/proofpoint/kapprover"
+  packages = ["podnames"]
+  revision = "5edde2270cd1a722bd49d377399c858cd3863bab"
+  version = "0.2.0"
+
+[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
@@ -196,6 +202,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c48b1b5b540ee2743841383d1adab1d10678c13d2ace87f37ba3f87b312eb672"
+  inputs-digest = "29d07c42d178890d6d7a197595c591b3ef717bcda2c991f8405da5549d6e4710"
   solver-name = "gps-cdcl"
   solver-version = 1
