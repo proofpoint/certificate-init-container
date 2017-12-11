@@ -49,7 +49,7 @@ func main() {
 	flag.StringVar(&certDir, "cert-dir", "/etc/tls", "The directory where the TLS certs should be written")
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "Kubernetes cluster domain")
 	flag.StringVar(&hostname, "hostname", "", "hostname as defined by pod.spec.hostname")
-	flag.StringVar(&namespace, "namespace", "default", "namespace as defined by pod.metadata.namespace")
+	flag.StringVar(&namespace, "namespace", "", "namespace as defined by pod.metadata.namespace")
 	flag.StringVar(&podName, "pod-name", "", "name as defined by pod.metadata.name")
 	flag.StringVar(&podIP, "pod-ip", "", "IP address as defined by pod.status.podIP")
 	flag.StringVar(&serviceNames, "service-names", "", "service names that resolve to this Pod; comma separated")
@@ -60,6 +60,15 @@ func main() {
 	flag.BoolVar(&createSecret, "create-secret", false, "create a new secret instead of waiting for one to update")
 	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.Parse()
+
+	if namespace == "" {
+		os.Stderr.WriteString("missing required -namespace argument/flag\n")
+		os.Exit(2)
+	}
+	if podName == "" {
+		os.Stderr.WriteString("missing required -pod-name argument/flag\n")
+		os.Exit(2)
+	}
 
 	// Create a Kubernetes client.
 	// Initialize a configuration based on the default service account.
