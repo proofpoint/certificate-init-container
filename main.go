@@ -16,28 +16,27 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"github.com/proofpoint/kapprover/podnames"
 	"io/ioutil"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"log"
 	"net"
 	"os"
 	"strings"
 	"time"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
+	namespace          string
+	podName            string
+	queryK8s           bool
 	additionalDNSNames string
 	certDir            string
 	clusterDomain      string
-	hostname           string
-	namespace          string
-	podIP              string
-	podName            string
 	serviceIPs         string
 	serviceNames       string
-	subdomain          string
 	labels             string
 	secretName         string
 	createSecret       bool
@@ -45,16 +44,14 @@ var (
 )
 
 func main() {
+	flag.StringVar(&namespace, "namespace", "", "namespace as defined by pod.metadata.namespace")
+	flag.StringVar(&podName, "pod-name", "", "name as defined by pod.metadata.name")
+	flag.BoolVar(&queryK8s, "query-k8s", false, "query Kubernetes for names appropriate to this Pod")
 	flag.StringVar(&additionalDNSNames, "additional-dnsnames", "", "additional dns names; comma separated")
 	flag.StringVar(&certDir, "cert-dir", "/etc/tls", "The directory where the TLS certs should be written")
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "Kubernetes cluster domain")
-	flag.StringVar(&hostname, "hostname", "", "hostname as defined by pod.spec.hostname")
-	flag.StringVar(&namespace, "namespace", "", "namespace as defined by pod.metadata.namespace")
-	flag.StringVar(&podName, "pod-name", "", "name as defined by pod.metadata.name")
-	flag.StringVar(&podIP, "pod-ip", "", "IP address as defined by pod.status.podIP")
 	flag.StringVar(&serviceNames, "service-names", "", "service names that resolve to this Pod; comma separated")
 	flag.StringVar(&serviceIPs, "service-ips", "", "service IP addresses that resolve to this Pod; comma separated")
-	flag.StringVar(&subdomain, "subdomain", "", "subdomain as defined by pod.spec.subdomain")
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
 	flag.StringVar(&secretName, "secret-name", "", "secret name to store generated files")
 	flag.BoolVar(&createSecret, "create-secret", false, "create a new secret instead of waiting for one to update")
@@ -72,7 +69,7 @@ func main() {
 
 	// Create a Kubernetes client.
 	// Initialize a configuration based on the default service account.
-    client, err := newClient()
+	client, err := newClient()
 	if err != nil {
 		log.Fatalf("Could not create Kubernetes client: %s", err)
 	}
@@ -92,16 +89,20 @@ func main() {
 		labelsMap[label] = key
 	}
 
-	// Gather the list of IP addresses for the certificate's IP SANs field which
-	// include:
-	//   - the pod IP address
-	//   - each service IP address that maps to this pod
-	ip := net.ParseIP(podIP)
-	if ip.To4() == nil && ip.To16() == nil {
-		log.Fatal("invalid pod IP address")
-	}
+	var ipAddresses []net.IP
+	var dnsNames []string
 
-	ipAddresses := []net.IP{ip}
+	if queryK8s {
+		pod, err := client.CoreV1().Pods(namespace).Get(podName, metaV1.GetOptions{})
+		if err != nil {
+			log.Fatalf("Could not query pod %q in namespace %q: %s", podName, namespace, err)
+		}
+
+		dnsNames, ipAddresses, err = podnames.GetNamesForPod(client, *pod, clusterDomain)
+		if err != nil {
+			log.Fatalf("Could not query names for pod %q in namespace %q: %s", podName, namespace, err)
+		}
+	}
 
 	for _, s := range strings.Split(serviceIPs, ",") {
 		if s == "" {
@@ -113,18 +114,6 @@ func main() {
 		}
 		ipAddresses = append(ipAddresses, ip)
 	}
-
-	// Gather a list of DNS names that resolve to this pod which include the
-	// default DNS name:
-	//   - ${pod-ip-address}.${namespace}.pod.${cluster-domain}
-	//
-	// For each service that maps to this pod a dns name will be added using
-	// the following template:
-	//   - ${service-name}.${namespace}.svc.${cluster-domain}
-	//
-	// A dns name will be added for each additional DNS name provided via the
-	// `-additional-dnsnames` flag.
-	dnsNames := defaultDNSNames(podIP, hostname, subdomain, namespace, clusterDomain)
 
 	for _, n := range strings.Split(additionalDNSNames, ",") {
 		if n == "" {
@@ -181,37 +170,18 @@ func main() {
 	os.Exit(0)
 }
 
-func defaultDNSNames(ip, hostname, subdomain, namespace, clusterDomain string) []string {
-	ns := []string{podDomainName(ip, namespace, clusterDomain)}
-	if hostname != "" && subdomain != "" {
-		ns = append(ns, podHeadlessDomainName(hostname, subdomain, namespace, clusterDomain))
-	}
-	return ns
-}
-
 func serviceDomainName(name, namespace, domain string) string {
 	return fmt.Sprintf("%s.%s.svc.%s", name, namespace, domain)
-}
-
-func podDomainName(ip, namespace, domain string) string {
-	return fmt.Sprintf("%s.%s.pod.%s", strings.Replace(ip, ".", "-", -1), namespace, domain)
-}
-
-func podHeadlessDomainName(hostname, subdomain, namespace, domain string) string {
-	if hostname == "" || subdomain == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s.%s.%s.svc.%s", hostname, subdomain, namespace, domain)
 }
 
 func newClient() (*kubernetes.Clientset, error) {
 	var config *rest.Config
 	var err error
-		// Initialize a configuration based on the default service account.
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, err
-		}
+	// Initialize a configuration based on the default service account.
+	config, err = rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	return kubernetes.NewForConfig(config)
 }

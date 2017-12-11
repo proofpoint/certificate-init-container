@@ -1,0 +1,35 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tls-approver
+  namespace: kube-system
+  labels:
+    k8s-app: tls-approver
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: tls-approver
+      labels:
+        k8s-app: tls-approver
+    spec:
+      containers:
+      - name: tls-approver
+        imagePullPolicy: IfNotPresent
+        image: repo.lab.ppops.net/dev-docker-local/kapprover:latest
+        args:
+          - -filter=group=system:serviceaccounts
+          - -denier=signaturealgorithm=SHA256WithRSA,SHA384WithRSA,SHA512WithRSA,SHA256WithRSAPSS,SHA384WithRSAPSS,SHA512WithRSAPSS
+          - -denier=minrsakeysize=3072
+          - -denier=noextensions
+          - -denier=keyusage=digital_signature,key_encipherment,server_auth,client_auth
+          - -denier=subjectispodforuser
+          - -denier=altnamesforpod
+          - -delete-after=1m
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
