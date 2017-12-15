@@ -40,14 +40,14 @@ var (
 func main() {
 	flag.StringVar(&namespace, "namespace", "", "namespace as defined by pod.metadata.namespace")
 	flag.StringVar(&podName, "pod-name", "", "name as defined by pod.metadata.name")
-	flag.BoolVar(&queryK8s, "query-k8s", false, "query Kubernetes for names appropriate to this Pod")
-	flag.StringVar(&additionalDNSNames, "additional-dnsnames", "", "additional dns names; comma separated")
 	flag.StringVar(&certDir, "cert-dir", "/etc/tls", "The directory where the TLS certs should be written")
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "Kubernetes cluster domain")
+	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
+	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma separated list of key=value")
+	flag.BoolVar(&queryK8s, "query-k8s", false, "query Kubernetes for names appropriate to this Pod")
+	flag.StringVar(&additionalDNSNames, "additional-dnsnames", "", "additional dns names; comma separated")
 	flag.StringVar(&serviceNames, "service-names", "", "service names that resolve to this Pod; comma separated")
 	flag.StringVar(&serviceIPs, "service-ips", "", "service IP addresses that resolve to this Pod; comma separated")
-	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
-	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.Parse()
 
 	if namespace == "" {
