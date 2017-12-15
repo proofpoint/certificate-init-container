@@ -12,12 +12,9 @@
 package main
 
 import (
-	"crypto/x509"
-	"encoding/pem"
 	"flag"
 	"fmt"
 	"github.com/proofpoint/kapprover/podnames"
-	"io/ioutil"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -25,7 +22,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 )
 
 var (
@@ -38,8 +34,6 @@ var (
 	serviceIPs         string
 	serviceNames       string
 	labels             string
-	secretName         string
-	createSecret       bool
 	keysize            int
 )
 
@@ -53,8 +47,6 @@ func main() {
 	flag.StringVar(&serviceNames, "service-names", "", "service names that resolve to this Pod; comma separated")
 	flag.StringVar(&serviceIPs, "service-ips", "", "service IP addresses that resolve to this Pod; comma separated")
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma seprated list of key=value")
-	flag.StringVar(&secretName, "secret-name", "", "secret name to store generated files")
-	flag.BoolVar(&createSecret, "create-secret", false, "create a new secret instead of waiting for one to update")
 	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.Parse()
 
@@ -132,40 +124,6 @@ func main() {
 	key, certificate := requestCertificate(client, labelsMap, dnsNames, ipAddresses)
 
 	writeKeystore(certDir, key, certificate)
-
-	if secretName != "" {
-		pemKeyBytes := pem.EncodeToMemory(&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(key),
-		})
-
-		for {
-			ks, err := client.CoreV1().Secrets(namespace).Get(secretName, metaV1.GetOptions{})
-			if err != nil {
-				if createSecret {
-					log.Fatalf("TODO: cannot create secrets")
-				} else {
-					log.Printf("Secret to store credentials (%s) not found; trying again in 5 seconds", secretName)
-					time.Sleep(5 * time.Second)
-					continue
-				}
-			}
-
-			k8sCrt, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-
-			stringData := make(map[string]string)
-			stringData["tls.key"] = string(pemKeyBytes)
-			stringData["tls.crt"] = string(certificate)
-			stringData["k8s.crt"] = string(k8sCrt)                                    // ok
-			stringData["tlsAndK8s.crt"] = string(certificate) + "\n" + string(k8sCrt) // ok
-
-			ks.StringData = stringData
-			_, err = client.CoreV1().Secrets(namespace).Update(ks)
-			log.Printf("Stored credentials in secret: (%s)", secretName)
-
-			break
-		}
-	}
 
 	os.Exit(0)
 }
