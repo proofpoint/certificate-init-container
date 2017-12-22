@@ -13,8 +13,8 @@ spec:
     spec:
       initContainers:
         - name: certificate-init-container
-          image: repo.lab.ppops.net/dev-docker-local/certificate-init-container:latest
-          imagePullPolicy: IfNotPresent
+          image: proofpoint/certificate-init-container:0.1.0
+          imagePullPolicy: Always
           env:
             - name: NAMESPACE
               valueFrom:
