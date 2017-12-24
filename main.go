@@ -27,14 +27,14 @@ import (
 var (
 	namespace          string
 	podName            string
-	queryK8s           bool
-	additionalDNSNames string
 	certDir            string
 	clusterDomain      string
-	serviceIPs         string
-	serviceNames       string
-	labels             string
 	keysize            int
+	labels             string
+	queryK8s           bool
+	additionalIps      string
+	additionalDnsNames string
+	serviceNames       string
 )
 
 func main() {
@@ -45,9 +45,9 @@ func main() {
 	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma separated list of key=value")
 	flag.BoolVar(&queryK8s, "query-k8s", false, "query Kubernetes for names appropriate to this Pod")
-	flag.StringVar(&additionalDNSNames, "additional-dnsnames", "", "additional dns names; comma separated")
-	flag.StringVar(&serviceNames, "service-names", "", "service names that resolve to this Pod; comma separated")
-	flag.StringVar(&serviceIPs, "service-ips", "", "service IP addresses that resolve to this Pod; comma separated")
+	flag.StringVar(&additionalIps, "ips", "", "additional IP addresses that resolve to this Pod; comma separated")
+	flag.StringVar(&additionalDnsNames, "dns-names", "", "additional dns names; comma separated")
+	flag.StringVar(&serviceNames, "service-names", "", "additional service names that resolve to this Pod; comma separated")
 	flag.Parse()
 
 	if namespace == "" {
@@ -96,7 +96,7 @@ func main() {
 		}
 	}
 
-	for _, s := range strings.Split(serviceIPs, ",") {
+	for _, s := range strings.Split(additionalIps, ",") {
 		if s == "" {
 			continue
 		}
@@ -107,7 +107,7 @@ func main() {
 		ipAddresses = append(ipAddresses, ip)
 	}
 
-	for _, n := range strings.Split(additionalDNSNames, ",") {
+	for _, n := range strings.Split(additionalDnsNames, ",") {
 		if n == "" {
 			continue
 		}
