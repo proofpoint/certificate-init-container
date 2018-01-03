@@ -33,12 +33,4 @@ both PEM and Java keystore (password "keystore") format to a shared filesystem.
 Next the `certificate-init-container` will exit and the pod will start the
 remaining containers, which will have access to the certificate and private key.
 
-## Current Release
-
-Container Image:
-
-```
-proofpoint/certificate-init-container:0.0.1
-```
-
 See the [example deployment](deployments/tls-app.yaml) for more details.
