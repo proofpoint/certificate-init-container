@@ -17,7 +17,7 @@ import (
 	"github.com/proofpoint/kapprover/podnames"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"net"
 	"os"
@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	kubeconfig         string
 	namespace          string
 	podName            string
 	certDir            string
@@ -38,9 +39,10 @@ var (
 )
 
 func main() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "(optional) path to kubeconfig file")
 	flag.StringVar(&namespace, "namespace", "", "namespace as defined by pod.metadata.namespace")
 	flag.StringVar(&podName, "pod-name", "", "name as defined by pod.metadata.name")
-	flag.StringVar(&certDir, "cert-dir", "/etc/tls", "The directory where the TLS certs should be written")
+	flag.StringVar(&certDir, "cert-dir", "/etc/tls", "directory where the TLS certs should be written")
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "Kubernetes cluster domain")
 	flag.IntVar(&keysize, "keysize", 3072, "bit size of private key")
 	flag.StringVar(&labels, "labels", "", "labels to include in CertificateSigningRequest object; comma separated list of key=value")
@@ -61,7 +63,7 @@ func main() {
 
 	// Create a Kubernetes client.
 	// Initialize a configuration based on the default service account.
-	client, err := newClient()
+	client, err := newClient(kubeconfig)
 	if err != nil {
 		log.Fatalf("Could not create Kubernetes client: %s", err)
 	}
@@ -132,11 +134,8 @@ func serviceDomainName(name, namespace, domain string) string {
 	return fmt.Sprintf("%s.%s.svc.%s", name, namespace, domain)
 }
 
-func newClient() (*kubernetes.Clientset, error) {
-	var config *rest.Config
-	var err error
-	// Initialize a configuration based on the default service account.
-	config, err = rest.InClusterConfig()
+func newClient(kubeconfig string) (kubernetes.Interface, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		return nil, err
 	}
