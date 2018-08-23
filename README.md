@@ -1,4 +1,3 @@
-[![Latest Release](http://github-release-version.herokuapp.com/github/proofpoint/certificate-init-container/release.svg)](https://github.com/proofpoint/certificate-init-container/releases/latest)
 [![Latest Docker Tag](https://images.microbadger.com/badges/version/proofpoint/certificate-init-container.svg)](https://microbadger.com/images/proofpoint/certificate-init-container "Get your own version badge on microbadger.com")
 [![Latest Docker Tag Details](https://images.microbadger.com/badges/image/proofpoint/certificate-init-container.svg)](https://microbadger.com/images/proofpoint/certificate-init-container "Get your own image badge on microbadger.com")
 
