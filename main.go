@@ -62,7 +62,6 @@ func main() {
 	}
 
 	// Create a Kubernetes client.
-	// Initialize a configuration based on the default service account.
 	client, err := newClient(kubeconfig)
 	if err != nil {
 		log.Fatalf("Could not create Kubernetes client: %s", err)
