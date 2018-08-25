@@ -6,6 +6,9 @@ metadata:
     app: tls-app
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: tls-app
   template:
     metadata:
       labels:
@@ -13,8 +16,7 @@ spec:
     spec:
       initContainers:
         - name: certificate-init-container
-          image: proofpoint/certificate-init-container:0.2.0
-          imagePullPolicy: Always
+          image: proofpoint/certificate-init-container:0.3.0
           env:
             - name: NAMESPACE
               valueFrom:
@@ -34,7 +36,6 @@ spec:
       containers:
         - name: tls-app
           image: gcr.io/hightowerlabs/tls-app:1.0.0
-          imagePullPolicy: Always
           args:
             - "-tls-cert=/etc/tls/tls.crt"
             - "-tls-key=/etc/tls/tls.key"
