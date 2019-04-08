@@ -7,6 +7,8 @@ import (
 	certificates "k8s.io/api/certificates/v1beta1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"github.com/sirupsen/logrus"
+	"k8s.io/api/core/v1"
 )
 
 func init() {
@@ -41,13 +43,31 @@ func (s *subjectispodforuser) Inspect(client kubernetes.Interface, request *cert
 	if err != nil {
 		return "", err
 	}
-	if len(podList.Items) == 0 {
-		return fmt.Sprintf("No POD in namespace %q with IP %q", namespace, podIp), nil
+
+	filtered := make([]v1.Pod, 0, 1)
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		if pod.Status.Phase != v1.PodPending && pod.Status.Phase != v1.PodRunning {
+			continue
+		}
+		filtered = append(filtered, pod)
 	}
 
-	expectedServiceAccount := "system:serviceaccount:" + namespace + ":" + podList.Items[0].Spec.ServiceAccountName
+	if len(filtered) == 0 {
+		return fmt.Sprintf("No pending or running POD in namespace %q with IP %q", namespace, podIp), nil
+	}
+	if len(filtered) > 1 {
+		logrus.Warnf("Subjectispodforuser found multiple pods for IP %q", podIp)
+		for _, pod := range filtered {
+			logrus.Infof("Pod %+v", pod)
+		}
+	}
+
+	expectedServiceAccount := "system:serviceaccount:" + namespace + ":" + filtered[0].Spec.ServiceAccountName
 	if request.Spec.Username != expectedServiceAccount {
-		return fmt.Sprintf("Requesting user is not %q", expectedServiceAccount), nil
+		return fmt.Sprintf("Requesting user %q is not %q", request.Spec.Username, expectedServiceAccount), nil
 	}
 
 	return "", nil

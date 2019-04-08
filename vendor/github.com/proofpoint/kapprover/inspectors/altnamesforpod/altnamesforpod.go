@@ -11,6 +11,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"net"
 	"strings"
+	"k8s.io/api/core/v1"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -49,11 +51,29 @@ func (a *altnamesforpod) Inspect(client kubernetes.Interface, request *certifica
 	if err != nil {
 		return "", err
 	}
-	if len(podList.Items) == 0 {
-		return fmt.Sprintf("No POD in namespace %q with IP %q", namespace, podIp), nil
+
+	filtered := make([]v1.Pod, 0, 1)
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		if pod.Status.Phase != v1.PodPending && pod.Status.Phase != v1.PodRunning {
+			continue
+		}
+		filtered = append(filtered, pod)
 	}
 
-	permittedDnsnames, permittedIps, err := podnames.GetNamesForPod(client, podList.Items[0], a.clusterDomain)
+	if len(filtered) == 0 {
+		return fmt.Sprintf("No pending or running POD in namespace %q with IP %q", namespace, podIp), nil
+	}
+	if len(filtered) > 1 {
+		logrus.Warnf("Altnamesforpod found multiple pods for IP %q", podIp)
+		for _, pod := range filtered {
+			logrus.Infof("Pod %+v", pod)
+		}
+	}
+
+	permittedDnsnames, permittedIps, err := podnames.GetNamesForPod(client, filtered[0], a.clusterDomain)
 	if err != nil {
 		return "", err
 	}

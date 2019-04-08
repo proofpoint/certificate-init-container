@@ -225,12 +225,12 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:37910a32d16db1de14beab6a3cc274e31da7050ce0c04baf634ae28cce56c64e"
+  digest = "1:52539f14c4a9f9e26cf8f61bf175ffb33582347d4de1f02d044290b896989a33"
   name = "github.com/proofpoint/kapprover"
   packages = ["podnames"]
   pruneopts = ""
-  revision = "5edde2270cd1a722bd49d377399c858cd3863bab"
-  version = "0.2.0"
+  revision = "6d5d412074b79bb3bae42def6057fc45aa0d9d31"
+  version = "0.7.0"
 
 [[projects]]
   digest = "1:261bc565833ef4f02121450d74eb88d5ae4bd74bfe5d0e862cddb8550ec35000"
