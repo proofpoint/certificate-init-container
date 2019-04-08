@@ -2,7 +2,7 @@ language: go
 go_import_path: github.com/proofpoint/certificate-init-container
 
 go:
-- "1.10"
+- "1.12"
 
 install:
 - true
