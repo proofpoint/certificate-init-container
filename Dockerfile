@@ -1,4 +1,4 @@
-FROM       golang:1.12
+FROM       golang:1.13
 ADD        . /go/src/github.com/proofpoint/certificate-init-container
 RUN        go install github.com/proofpoint/certificate-init-container && \
            go test github.com/proofpoint/certificate-init-container/...
