@@ -35,6 +35,7 @@ func TestInspect(t *testing.T) {
 		setupRequest    func(request *x509.CertificateRequest)
 		podNamespace    string
 		podIp           string
+		inspectorName   string
 	}{
 		{
 			name:          "CnHasO",
@@ -164,6 +165,31 @@ func TestInspect(t *testing.T) {
 			expectMessage: "Subject Alt Name contains disallowed name: example.org",
 		},
 		{
+			name: "unqualified domain with altnamesforpod",
+			setupRequest: func(request *x509.CertificateRequest) {
+				request.DNSNames = []string{
+					"172-1-0-3.somenamespace.pod.cluster.local",
+					"tls-service.somenamespace.svc.cluster.local",
+					"tls-service.somenamespace.svc",
+				}
+				request.IPAddresses = makeIps("172.1.0.3", "10.0.0.1", "10.1.2.3", "10.1.2.4")
+			},
+			expectMessage: "Subject Alt Name contains disallowed name: tls-service.somenamespace.svc",
+		},
+		{
+			name: "unqualified domain with altnamesforpodallowunqualified",
+			setupRequest: func(request *x509.CertificateRequest) {
+				request.DNSNames = []string{
+					"172-1-0-3.somenamespace.pod.cluster.local",
+					"tls-service.somenamespace.svc.cluster.local",
+					"tls-service.somenamespace.svc",
+				}
+				request.IPAddresses = makeIps("172.1.0.3", "10.0.0.1", "10.1.2.3", "10.1.2.4")
+			},
+			inspectorName: "altnamesforpodallowunqualified",
+			expectMessage: "",
+		},
+		{
 			name: "ExtraIp",
 			setupRequest: func(request *x509.CertificateRequest) {
 				request.DNSNames = []string{
@@ -290,8 +316,8 @@ func TestInspect(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metaV1.ObjectMeta{
-						Name:      "wrong-app-579f7cd745-wrong",
-						Namespace: "somenamespace",
+						Name:              "wrong-app-579f7cd745-wrong",
+						Namespace:         "somenamespace",
 						DeletionTimestamp: &nowTime,
 						Labels: map[string]string{
 							"app": "wrong-app",
@@ -346,9 +372,13 @@ func TestInspect(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			inspector, exists := inspectors.Get("altnamesforpod")
+			if testcase.inspectorName == "" {
+				testcase.inspectorName = "altnamesforpod"
+			}
+
+			inspector, exists := inspectors.Get(testcase.inspectorName)
 			if !exists {
-				t.Fatal("Expected inspectors.Get(\"altnamesforpod\") to exist, did not")
+				t.Fatalf("Expected inspectors.Get(\"%s\") to exist, did not", testcase.inspectorName)
 			}
 
 			if testcase.inspectorConfig != "" {

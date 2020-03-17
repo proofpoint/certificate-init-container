@@ -36,6 +36,7 @@ var (
 	additionalIps      string
 	additionalDnsNames string
 	serviceNames       string
+	includeUnqualified bool
 )
 
 func main() {
@@ -50,6 +51,7 @@ func main() {
 	flag.StringVar(&additionalIps, "ips", "", "additional IP addresses that resolve to this Pod; comma separated")
 	flag.StringVar(&additionalDnsNames, "dns-names", "", "additional dns names; comma separated")
 	flag.StringVar(&serviceNames, "service-names", "", "additional service names that resolve to this Pod; comma separated")
+	flag.BoolVar(&includeUnqualified, "include-unqualified", false, "include unqualified .svc domains in names from --query-k8s")
 	flag.Parse()
 
 	if namespace == "" {
@@ -91,7 +93,7 @@ func main() {
 			log.Fatalf("Could not query pod %q in namespace %q: %s", podName, namespace, err)
 		}
 
-		dnsNames, ipAddresses, err = podnames.GetNamesForPod(client, *pod, clusterDomain)
+		dnsNames, ipAddresses, err = podnames.GetNamesForPod(client, *pod, clusterDomain, includeUnqualified)
 		if err != nil {
 			log.Fatalf("Could not query names for pod %q in namespace %q: %s", podName, namespace, err)
 		}
