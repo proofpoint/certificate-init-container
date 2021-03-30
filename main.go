@@ -12,6 +12,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/proofpoint/kapprover/podnames"
@@ -88,7 +89,7 @@ func main() {
 	var dnsNames []string
 
 	if queryK8s {
-		pod, err := client.CoreV1().Pods(namespace).Get(podName, metaV1.GetOptions{})
+		pod, err := client.CoreV1().Pods(namespace).Get(context.TODO(), podName, metaV1.GetOptions{})
 		if err != nil {
 			log.Fatalf("Could not query pod %q in namespace %q: %s", podName, namespace, err)
 		}

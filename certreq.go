@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -89,9 +90,9 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 		},
 	}
 
-	_, err = client.CertificatesV1beta1().CertificateSigningRequests().Get(certificateSigningRequestName, metaV1.GetOptions{})
+	_, err = client.CertificatesV1beta1().CertificateSigningRequests().Get(context.TODO(), certificateSigningRequestName, metaV1.GetOptions{})
 	if err != nil {
-		_, err = client.CertificatesV1beta1().CertificateSigningRequests().Create(certificateSigningRequest)
+		_, err = client.CertificatesV1beta1().CertificateSigningRequests().Create(context.TODO(), certificateSigningRequest, metaV1.CreateOptions{})
 		if err != nil {
 			log.Fatalf("unable to create the certificate signing request: %s", err)
 		}
@@ -101,7 +102,7 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 	}
 
 	for {
-		csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(certificateSigningRequestName, metaV1.GetOptions{})
+		csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(context.TODO(), certificateSigningRequestName, metaV1.GetOptions{})
 		if err != nil {
 			log.Printf("unable to retrieve certificate signing request (%s): %s", certificateSigningRequestName, err)
 			time.Sleep(5 * time.Second)
