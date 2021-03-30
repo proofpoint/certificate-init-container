@@ -1,7 +1,8 @@
 FROM       golang:1.15.6
-ADD        . /go/src/github.com/proofpoint/certificate-init-container
-RUN        go install github.com/proofpoint/certificate-init-container && \
-           go test github.com/proofpoint/certificate-init-container/...
+WORKDIR    /go/src/github.com/proofpoint/certificate-init-container
+ADD        . .
+RUN        go install -mod vendor -a && \
+           go test -mod vendor ./...
 
 FROM gcr.io/distroless/base-debian10
 
