@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	certificates "k8s.io/api/certificates/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"log"
@@ -103,6 +104,10 @@ func requestCertificate(client kubernetes.Interface, labels map[string]string, d
 
 	for {
 		csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(context.TODO(), certificateSigningRequestName, metaV1.GetOptions{})
+		if errors.IsNotFound(err) {
+			// If the request got deleted, waiting won't help.
+			log.Fatalf("certificate signing request (%s) not found", certificateSigningRequestName)
+		}
 		if err != nil {
 			log.Printf("unable to retrieve certificate signing request (%s): %s", certificateSigningRequestName, err)
 			time.Sleep(5 * time.Second)
