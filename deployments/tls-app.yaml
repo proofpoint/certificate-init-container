@@ -30,6 +30,19 @@ spec:
             - "-namespace=$(NAMESPACE)"
             - "-pod-name=$(POD_NAME)"
             - "-query-k8s"
+          resources:
+            limits:
+              cpu: 100m
+              memory: 50Mi
+            requests:
+              cpu: 30m
+              memory: 10Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - all
+            runAsNonRoot: true
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
@@ -44,6 +57,9 @@ spec:
           resources:
             limits:
               memory: "50Mi"
+              cpu: "100m"
+            requests:
+              memory: "40Mi"
               cpu: "100m"
           volumeMounts:
             - name: tls
