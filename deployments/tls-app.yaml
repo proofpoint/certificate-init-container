@@ -16,7 +16,7 @@ spec:
     spec:
       initContainers:
         - name: certificate-init-container
-          image: proofpoint/certificate-init-container:0.4.0
+          image: proofpoint/certificate-init-container:v0.9.0
           env:
             - name: NAMESPACE
               valueFrom:
